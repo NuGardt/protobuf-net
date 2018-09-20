@@ -1,19 +1,26 @@
 # protobuf-net
 protobuf-net is a contract based serializer for .NET code, that happens to write data in the "protocol buffers" serialization format engineered by Google. The API, however, is very different to Google's, and follows typical .NET patterns (it is broadly comparable, in usage, to XmlSerializer, DataContractSerializer, etc). It should work for most .NET languages that write standard types and can use attributes.
 
-Supported Runtimes :
-- .net 2.0/3.0/3.5/4.0
-- Compact Framework 2.0/3.5
-- Mono 2.x
-- Silverlight, Windows Phone 7&8
-- Windows 8 apps
+## Release Notes
 
-Under investigation
-- CoreClr/DNX
+[Change history and pending changes are here](https://mgravell.github.io/protobuf-net/releasenotes).
 
-## install
+To understand how protobuf-net relates to protobuf [see here](https://mgravell.github.io/protobuf-net/version).
 
-Nuget : Install-Package protobuf-net 
+---
+
+## Supported Runtimes
+- .NET Framework 2.0+
+- .NET Standard 1.0+ (note that 1.0 is very restricted, and suits iOS etc; use the highest .NET Standard that works for your platform)
+- UAP 10.0(+?)
+
+It is possible to build for more specific TFMs, but *right now* I've simplified the build to those. If you need help
+with a custom build: let me know.
+
+## Runtime Installation
+
+Packages are available on NuGet: [`protobuf-net`](https://www.nuget.org/packages/protobuf-net). You can use the following command in the Package Manager Console:
+`Install-Package protobuf-net`
 
 ## Basic usage
 
@@ -24,7 +31,7 @@ class Person {
     [ProtoMember(1)]
     public int Id {get;set;}
     [ProtoMember(2)]
-    public string Name {get;set:}
+    public string Name {get;set;}
     [ProtoMember(3)]
     public Address Address {get;set;}
 }
@@ -97,7 +104,7 @@ Inheritance must be explicitly declared, in a similar way that if must for XmlSe
 
 ```csharp
 [ProtoContract]
-[ProtoInclude(7, typeof(SomeDerivedType)]
+[ProtoInclude(7, typeof(SomeDerivedType))]
 class SomeBaseType {...}
 
 [ProtoContract]
@@ -107,11 +114,13 @@ There is no special significance in the 7 above; it is an integer key, just like
 
 ### .proto file
 
-As an alternative to writing your classes and decorating them, You can generate your types and serializer from a .proto schema. 
-
-This done using the precompiler. [Additional guidance can be found here](http://blog.marcgravell.com/2012/07/introducing-protobuf-net-precompiler.html).
+As an alternative to writing your classes and decorating them, You can generate your types from a .proto schema using [`protogen`](https://protogen.marcgravell.com/);
+the `protogen` tool is available as a zip from that location, or [as a "global tool"](https://www.nuget.org/packages/protobuf-net.Protogen) (multi-platform).
 
 ### Alternative to attributes
 
-In v2, everything that can be done with attributes can also be configured at runtime via RuntimeTypeModel. The Serializer.* methods are basically just shortcuts to RuntimeTypeModel.Default.*, so to manipulate the behaviour of Serializer.*, you must configure RuntimeTypeModel.Default. 
+In v2, everything that can be done with attributes can also be configured at runtime via `RuntimeTypeModel`. The Serializer.* methods are basically just shortcuts to RuntimeTypeModel.Default.*, so to manipulate the behaviour of Serializer.*, you must configure RuntimeTypeModel.Default. 
 
+## Support
+
+I try to be responsive to [Stack Overflow questions in the `protobuf-net` tag](https://stackoverflow.com/questions/tagged/protobuf-net), [issues logged on github](https://github.com/mgravell/protobuf-net), [email](mailto:marc.gravell@gmail.com), etc. I don't currently offer a paid support channel. If I've helped you, feel free to [buy me a coffee](https://buymeacoff.ee/marcgravell).
