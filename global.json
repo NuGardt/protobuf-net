@@ -1,6 +1,9 @@
-﻿{
-  "projects": [ "protobuf-net", "Tests.Dnx" ],
+{
   "sdk": {
-    "version": "1.0.0-rc1-final"
+    "version": "2.1.300"
+  },
+  "msbuild-sdks": {
+    "MSBuild.Sdk.Extras": "1.5.4",
+    "__MSBuild.Sdk.Extras": "1.6.20-preview"
   }
 }
