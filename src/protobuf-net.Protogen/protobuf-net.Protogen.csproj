@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>netcoreapp2.1</TargetFrameworks>
+    <TargetFrameworks>net6.0</TargetFrameworks>
     <Configurations>Debug;Release;VS</Configurations>
     <PackAsTool>true</PackAsTool>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
@@ -9,12 +9,17 @@
     <ToolCommandName>protogen</ToolCommandName>
     <PackageId>protobuf-net.Protogen</PackageId>
     <Title>protobuf-net command-line "global tool" for .NET code-generation from .proto schema files</Title>
+    <GrpcTools>true</GrpcTools>
+    <ApplicationIcon>protobuf-net.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(GrpcTools)'=='true'">
+    <DefineConstants>$(DefineConstants);GRPC_TOOLS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\protogen\**\*.cs" Exclude="..\protogen\obj\**\*" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="../protobuf-net/protobuf-net.csproj" />
     <ProjectReference Include="../protobuf-net.Reflection/protobuf-net.Reflection.csproj" />
+    <ProjectReference Include="../protobuf-net/protobuf-net.csproj" />
+    <PackageReference Include="protobuf-net.Grpc.Reflection" Condition="'$(GrpcTools)'=='true'" />
+    <PackageReference Include="Grpc.Net.Client" Condition="'$(GrpcTools)'=='true'" />
   </ItemGroup>
 </Project>

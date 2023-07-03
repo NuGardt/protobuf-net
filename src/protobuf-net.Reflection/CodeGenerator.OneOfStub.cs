@@ -1,9 +1,14 @@
 ﻿using Google.Protobuf.Reflection;
+using System;
+using System.Linq;
 
 namespace ProtoBuf.Reflection
 {
     public partial class CommonCodeGenerator
     {
+        private protected static bool UseMemory(GeneratorContext ctx)
+            => string.Equals(ctx.GetCustomOption("bytes"), "Memory", StringComparison.InvariantCultureIgnoreCase);
+
         /// <summary>
         /// Represents the union summary of a one-of declaration
         /// </summary>
@@ -73,6 +78,7 @@ namespace ProtoBuf.Reflection
                         break;
                 }
             }
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0066:Convert switch statement to expression", Justification = "Readability")]
             internal string GetStorage(FieldDescriptorProto.Type type, string typeName)
             {
                 switch (type)
@@ -82,34 +88,30 @@ namespace ProtoBuf.Reflection
                     case FieldDescriptorProto.Type.TypeInt32:
                     case FieldDescriptorProto.Type.TypeSfixed32:
                     case FieldDescriptorProto.Type.TypeSint32:
-                    case FieldDescriptorProto.Type.TypeFixed32:
                     case FieldDescriptorProto.Type.TypeEnum:
                         return "Int32";
                     case FieldDescriptorProto.Type.TypeFloat:
                         return "Single";
+                    case FieldDescriptorProto.Type.TypeFixed32:
                     case FieldDescriptorProto.Type.TypeUint32:
                         return "UInt32";
                     case FieldDescriptorProto.Type.TypeDouble:
                         return "Double";
-                    case FieldDescriptorProto.Type.TypeFixed64:
                     case FieldDescriptorProto.Type.TypeInt64:
                     case FieldDescriptorProto.Type.TypeSfixed64:
                     case FieldDescriptorProto.Type.TypeSint64:
                         return "Int64";
+                    case FieldDescriptorProto.Type.TypeFixed64:
                     case FieldDescriptorProto.Type.TypeUint64:
                         return "UInt64";
                     case FieldDescriptorProto.Type.TypeMessage:
-                        switch (typeName)
+                        return typeName switch
                         {
-                            case ".google.protobuf.Timestamp":
-                                return "DateTime";
-                            case ".google.protobuf.Duration":
-                                return "TimeSpan";
-                            case ".bcl.Guid":
-                                return "Guid";
-                            default:
-                                return "Object";
-                        }
+                            ".google.protobuf.Timestamp" => "DateTime",
+                            ".google.protobuf.Duration" => "TimeSpan",
+                            ".bcl.Guid" => "Guid",
+                            _ => "Object",
+                        };
                     default:
                         return "Object";
                 }

@@ -12,14 +12,16 @@ namespace ProtoBuf.Reflection
         private readonly IEnumerator<T> _iter;
         private T _peek, _prev;
         private bool _havePeek, _eof;
-        public Peekable(IEnumerable<T> sequence)
+        public List<Error> Errors { get; }
+        public Peekable(IEnumerable<T> sequence, List<Error> errors)
         {
             _iter = sequence.GetEnumerator();
+            Errors = errors;
         }
         public T Previous => _prev;
         public bool Consume()
         {
-            bool haveData = _havePeek || Peek(out T val);
+            bool haveData = _havePeek || Peek(out T _);
             _prev = _peek;
             _havePeek = false;
             return haveData;

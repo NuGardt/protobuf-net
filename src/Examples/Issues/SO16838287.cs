@@ -1,46 +1,34 @@
-﻿using Xunit;
-using ProtoBuf;
+﻿using ProtoBuf;
 using ProtoBuf.Meta;
 using System;
-using System.IO;
+using Xunit;
 
 namespace Examples.Issues
 {
-    
     public class SO16838287
     {
         [Fact]
         public void ExecuteRuntime()
         {
             var model = GetModel();
-            Program.ExpectFailure<NotSupportedException>(() =>
-            {
-                Execute(model, 20, 0, 20, "Runtime");
-                Execute(model, 1, 0, 18, "Runtime");
-            }); // ICollection<T>.Add(T)
+            Execute(model, 20, 0, 20, "Runtime");
+            Execute(model, 20, 1, 18, "Runtime");
         }
         [Fact]
         public void ExecuteCompileInPlace()
         {
-
             var model = GetModel();
             model.CompileInPlace();
-            Program.ExpectFailure<NotSupportedException>(() =>
-            {
-                Execute(model, 20, 0, 20, "CompileInPlace");
-                Execute(model, 1, 0, 18, "CompileInPlace");
-            }); // ICollection<T>.Add(T)
+            Execute(model, 20, 0, 20, "CompileInPlace");
+            Execute(model, 20, 1, 18, "CompileInPlace");
         }
         [Fact]
         public void ExecuteCompile()
         {
             var model = GetModel();
             var compiled = model.Compile();
-            Program.ExpectFailure<NotSupportedException>(() =>
-            {
-                Execute(compiled, 20, 0, 20, "Compile");
-                Execute(compiled, 1, 0, 18, "Compile");
-            }); // ICollection<T>.Add(T)
+            Execute(compiled, 20, 0, 20, "Compile");
+            Execute(compiled, 20, 1, 18, "Compile");
         }
         
         [Fact]
@@ -60,14 +48,14 @@ namespace Examples.Issues
             var seg2 = clone.Data;
             var data2 = seg2.Array;
 
-            Assert.Equal(offset, seg2.Offset); //, caption);
+            Assert.Equal(0, seg2.Offset); //, caption);
             Assert.Equal(count, seg2.Count); //, caption);
-            Assert.Equal(data.Length, data2.Length); //, caption);
-            Assert.Equal(BitConverter.ToString(data), BitConverter.ToString(data2)); //, caption);
+            Assert.Equal(count, data2.Length); //, caption);
+            Assert.Equal(BitConverter.ToString(data, offset, count), BitConverter.ToString(data2, 0, count)); //, caption);
         }
         static RuntimeTypeModel GetModel()
         {
-            var model = TypeModel.Create();
+            var model = RuntimeTypeModel.Create();
             model.AutoCompile = false;
             model.Add(typeof(Foo), true);
             return model;

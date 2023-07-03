@@ -12,7 +12,7 @@ namespace Examples
         static readonly bool unavailable;
         static PEVerify()
         {
-            exePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles(x86)%\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.6.1 Tools\PEVerify.exe");
+            exePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles(x86)%\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools\PEVerify.exe");
             if (!File.Exists(exePath))
             {
                 Console.Error.WriteLine("PEVerify not found at " + exePath);
@@ -20,12 +20,12 @@ namespace Examples
             }
         }
 #endif
-        public static bool AssertValid(string path)
+        public static void AssertValid(string path)
         {
 #if COREFX
-            return true;
+            return;
 #else
-            if (unavailable) return true;
+            if (unavailable) return;
             if(!File.Exists(path))
             {
                 throw new FileNotFoundException(path);
@@ -35,15 +35,15 @@ namespace Examples
             psi.WindowStyle = ProcessWindowStyle.Hidden;
             using (Process proc = Process.Start(psi))
             {
-                if (proc.WaitForExit(10000))
+                if (proc.WaitForExit(20000))
                 {
                     Assert.Equal(0, proc.ExitCode); //, path);
-                    return proc.ExitCode == 0;
+                    return; // proc.ExitCode == 0;
                 }
                 else
                 {
-                    proc.Kill();
-                    throw new TimeoutException();
+                    try { proc.Kill(); } catch { }
+                    throw new TimeoutException("PEVerify " + path);
                 }
             }
 #endif

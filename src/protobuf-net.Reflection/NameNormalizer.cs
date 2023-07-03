@@ -1,13 +1,12 @@
 ﻿using Google.Protobuf.Reflection;
+using ProtoBuf.Reflection.Internal;
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 namespace ProtoBuf.Reflection
 {
-#pragma warning disable RCS1194 // Implement exception constructors.
     internal class ParserException : Exception
-#pragma warning restore RCS1194 // Implement exception constructors.
     {
         public int ColumnNumber { get; }
         public int LineNumber { get; }
@@ -48,6 +47,14 @@ namespace ProtoBuf.Reflection
             /// Suggest a name with idiomatic pluralization
             /// </summary>
             public override string Pluralize(string identifier) => AutoPluralize(identifier);
+        }
+        private class NoPluralNormalizer : NameNormalizer
+        {
+            protected override string GetName(string identifier) => AutoCapitalize(identifier);
+            /// <summary>
+            /// Suggest a name with idiomatic pluralization
+            /// </summary>
+            public override string Pluralize(string identifier) => identifier;
         }
         /// <summary>
         /// Suggest a name with idiomatic name capitalization
@@ -109,6 +116,10 @@ namespace ProtoBuf.Reflection
         /// </summary>
         public static NameNormalizer Null => new NullNormalizer(); // intentionally not reused
         /// <summary>
+        /// Name normalizer with default protobuf-net behaviour, using .NET idioms, without pluralization
+        /// </summary>
+        public static NameNormalizer NoPlural => new NoPluralNormalizer(); // intentionally not reused
+        /// <summary>
         /// Suggest a normalized identifier
         /// </summary>
         protected abstract string GetName(string identifier);
@@ -124,8 +135,8 @@ namespace ProtoBuf.Reflection
         {
             var ns = definition?.Options?.GetOptions()?.Namespace;
             if (!string.IsNullOrWhiteSpace(ns)) return ns;
-            ns = definition.Options?.CsharpNamespace;
-            if (string.IsNullOrWhiteSpace(ns)) ns = GetName(definition.Package);
+            ns = definition?.Options?.CsharpNamespace;
+            if (string.IsNullOrWhiteSpace(ns)) ns = GetName(definition?.Package);
 
             if (string.IsNullOrEmpty(ns)) ns = definition?.DefaultPackage;
 
@@ -167,7 +178,7 @@ namespace ProtoBuf.Reflection
         {
             var name = definition?.Options?.GetOptions()?.Name;
             if (!string.IsNullOrWhiteSpace(name)) return name;
-            return AutoCapitalize(definition.Name);
+            return GetName(definition.Name);
         }
         /// <summary>
         /// Suggest a normalized identifier
@@ -184,6 +195,26 @@ namespace ProtoBuf.Reflection
             return GetName(definition.Parent as DescriptorProto, preferred, definition.Name, true);
         }
 
+        /// <summary>
+        /// Suggest a normalized identifier
+        /// </summary>
+        public virtual string GetName(ServiceDescriptorProto definition)
+        {
+            var name = definition?.Options?.GetOptions()?.Name;
+            if (!string.IsNullOrWhiteSpace(name)) return name;
+            return "I" + GetName(definition.Name); // .NET convention
+        }
+
+        /// <summary>
+        /// Suggest a normalized identifier
+        /// </summary>
+        public virtual string GetName(MethodDescriptorProto definition)
+        {
+            var name = definition?.Options?.GetOptions()?.Name;
+            if (!string.IsNullOrWhiteSpace(name)) return name;
+            return GetName(definition.Name);
+        }
+
         internal bool IsCaseSensitive { get; set; }
 
         /// <summary>
@@ -192,7 +223,7 @@ namespace ProtoBuf.Reflection
         protected HashSet<string> BuildConflicts(DescriptorProto parent, bool includeDescendents)
         {
             var conflicts = new HashSet<string>(
-                IsCaseSensitive ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+                IsCaseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
             if (parent != null)
             {
                 conflicts.Add(GetName(parent));
