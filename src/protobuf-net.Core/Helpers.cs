@@ -23,7 +23,7 @@ namespace ProtoBuf
 
         internal static MethodInfo GetInstanceMethod(Type declaringType, string name, Type[] types)
         {
-            if (types is null) types = Type.EmptyTypes;
+            types ??= Type.EmptyTypes;
             return declaringType.GetMethod(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
                 null, types, null);
         }
@@ -64,6 +64,10 @@ namespace ProtoBuf
             if (type == typeof(Type)) return ProtoTypeCode.Type;
             if (type == typeof(IntPtr)) return ProtoTypeCode.IntPtr;
             if (type == typeof(UIntPtr)) return ProtoTypeCode.UIntPtr;
+#if NET6_0_OR_GREATER
+            if (type == typeof(DateOnly)) return ProtoTypeCode.DateOnly;
+            if (type == typeof(TimeOnly)) return ProtoTypeCode.TimeOnly;
+#endif
 
             return ProtoTypeCode.Unknown;
         }
@@ -90,7 +94,7 @@ namespace ProtoBuf
             var method = property.GetSetMethod(nonPublic);
             if (method is null && !nonPublic && allowInternal)
             { // could be "internal" or "protected internal"; look for a non-public, then back-check
-                method = property.GetGetMethod(true);
+                method = property.GetSetMethod(true);
                 if (method is not null && !(method.IsAssembly || method.IsFamilyOrAssembly))
                 {
                     method = null;
@@ -187,5 +191,9 @@ namespace ProtoBuf
         ByteReadOnlyMemory = 107,
         IntPtr = 108,
         UIntPtr = 109,
+#if NET6_0_OR_GREATER
+        DateOnly = 110,
+        TimeOnly = 111,
+#endif
     }
 }

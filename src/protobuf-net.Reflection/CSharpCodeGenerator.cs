@@ -126,7 +126,7 @@ namespace ProtoBuf.Reflection
         protected override string GetLanguageVersion(FileDescriptorProto obj)
             => obj?.Options?.GetOptions()?.CSharpLanguageVersion;
 
-        private const string AdditionalSuppressionCodes = ", IDE0079, IDE1006, RCS1036, RCS1057, RCS1085, RCS1192";
+        private const string AdditionalSuppressionCodes = ", CS8981, IDE0079, IDE1006, RCS1036, RCS1057, RCS1085, RCS1192";
 
         /// <summary>
         /// Start a file
@@ -578,7 +578,7 @@ namespace ProtoBuf.Reflection
                     ctx.WriteLine($"{GetAccess(GetAccess(field))} global::System.Collections.Generic.List<{typeName}> {Escape(name)} {{ get; {(allowSet ? "" : "private ")}set; }}");
                 }
             }
-            else if (oneOf is object)
+            else if (oneOf is not null)
             {
                 var defValue = string.IsNullOrWhiteSpace(defaultValue) ? (ctx.Supports(CSharp7_1) ? "default" : $"default({typeName})") : (defaultValue + suffix);
                 var fieldName = GetOneOfFieldName(oneOf.OneOf);

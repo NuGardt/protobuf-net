@@ -5,7 +5,6 @@ using ProtoBuf.Serializers;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 
@@ -196,6 +195,11 @@ namespace ProtoBuf.Meta
         /// Indicates whether the current type has defined subtypes
         /// </summary>
         public bool HasSubtypes => _subTypes is not null && _subTypes.Count != 0;
+
+        /// <summary>
+        /// Returns the number of defined subtypes on the current type
+        /// </summary>
+        public int SubtypesCount => _subTypes?.Count ?? 0;
 
         /// <summary>
         /// Returns the set of callbacks defined for this type
@@ -565,8 +569,7 @@ namespace ProtoBuf.Meta
             if (IsAutoTuple)
             {
                 if (involvedInInheritance) ThrowTupleTypeWithInheritance(Type);
-                ConstructorInfo ctor = ResolveTupleConstructor(Type, out MemberInfo[] mapping);
-                if (ctor is null) throw new InvalidOperationException();
+                ConstructorInfo ctor = ResolveTupleConstructor(Type, out MemberInfo[] mapping) ?? throw new InvalidOperationException();
                 return (IProtoTypeSerializer)Activator.CreateInstance(typeof(TupleSerializer<>).MakeGenericType(Type),
                     args: new object[] { model, ctor, mapping, GetFeatures(), CompatibilityLevel });
             }
@@ -938,7 +941,7 @@ namespace ProtoBuf.Meta
         {
             AttributeFamily family = AttributeFamily.None;
 
-            if (attributes is null) attributes = AttributeMap.Create(type, false);
+            attributes ??= AttributeMap.Create(type, false);
 
             for (int i = 0; i < attributes.Length; i++)
             {
@@ -1317,13 +1320,13 @@ namespace ProtoBuf.Meta
                     }
                 }
 
-                if ((attrib = GetAttribute(attribs, typeof(NullWrappedValueAttribute).FullName)) is object)
+                if ((attrib = GetAttribute(attribs, typeof(NullWrappedValueAttribute).FullName)) is not null)
                 {
                     vm.NullWrappedValue = true;
                     if (attrib.TryGet(nameof(NullWrappedValueAttribute.AsGroup), out object tmp) && tmp is bool b)
                         vm.NullWrappedValueGroup = b;
                 }
-                if ((attrib = GetAttribute(attribs, typeof(NullWrappedCollectionAttribute).FullName)) is object)
+                if ((attrib = GetAttribute(attribs, typeof(NullWrappedCollectionAttribute).FullName)) is not null)
                 {
                     vm.NullWrappedCollection = true;
                     if (attrib.TryGet(nameof(NullWrappedCollectionAttribute.AsGroup), out object tmp) && tmp is bool b)
@@ -1721,7 +1724,10 @@ namespace ProtoBuf.Meta
         public EnumMember[] GetEnumValues()
         {
             if (!HasEnums) return Array.Empty<EnumMember>();
-            return Enums.ToArray();
+
+            var arr = Enums.ToArray();
+            Array.Sort(arr);
+            return arr;
         }
 
         /// <summary>
@@ -1971,6 +1977,8 @@ namespace ProtoBuf.Meta
             if (surrogateType is not null) return; // nothing to write
 
             bool multipleNamespaceSupport = (flags & SchemaGenerationFlags.MultipleNamespaceSupport) != 0;
+            bool isEnumNamePrefixSupported = (flags & SchemaGenerationFlags.IncludeEnumNamePrefix) != 0;
+
             var repeated = model.TryGetRepeatedProvider(Type);
 
             if (repeated is not null)
@@ -2027,7 +2035,7 @@ namespace ProtoBuf.Meta
             else if (Type.IsEnum)
             {
                 var enums = GetEnumValues();
-
+                string enumNamePrefix = isEnumNamePrefixSupported ? $"{GetSchemaTypeName(callstack)}_" : "";
 
                 bool allValid = IsValidEnum(enums);
                 if (!allValid) NewLine(builder, indent).Append("/* for context only");
@@ -2063,14 +2071,15 @@ namespace ProtoBuf.Meta
                     var parsed = member.TryGetInt32();
                     if (parsed.HasValue && parsed.Value == 0)
                     {
-                        NewLine(builder, indent + 1).Append(member.Name).Append(" = 0;");
+                        NewLine(builder, indent + 1).Append(enumNamePrefix).Append(member.Name).Append(" = 0;");
                         haveWrittenZero = true;
                     }
                 }
 
                 if (syntax == ProtoSyntax.Proto3 && !haveWrittenZero)
                 {
-                    NewLine(builder, indent + 1).Append("ZERO = 0; // proto3 requires a zero value as the first item (it can be named anything)");
+                    NewLine(builder, indent + 1).Append(enumNamePrefix).Append("ZERO").Append(" = 0;")
+                        .Append(" // proto3 requires a zero value as the first item (it can be named anything)");
                 }
 
                 // note array is already sorted, so zero would already be first
@@ -2080,11 +2089,12 @@ namespace ProtoBuf.Meta
                     if (parsed.HasValue)
                     {
                         if (parsed.Value == 0) continue;
-                        NewLine(builder, indent + 1).Append(member.Name).Append(" = ").Append(parsed.Value).Append(';');
+                        NewLine(builder, indent + 1).Append(enumNamePrefix).Append(member.Name).Append(" = ").Append(parsed.Value).Append(';');
                     }
                     else
                     {
-                        NewLine(builder, indent + 1).Append("// ").Append(member.Name).Append(" = ").Append(member.Value).Append(';').Append(" // note: enums should be valid 32-bit integers");
+                        NewLine(builder, indent + 1).Append("// ").Append(enumNamePrefix).Append(member.Name)
+                            .Append(" = ").Append(member.Value).Append(';').Append(" // note: enums should be valid 32-bit integers");
                     }
                 }
                 if (HasReservations) AppendReservations();

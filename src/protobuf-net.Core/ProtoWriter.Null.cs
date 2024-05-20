@@ -139,7 +139,7 @@ namespace ProtoBuf
             }
             protected internal override void WriteSubType<T>(ref State state, T value, ISubTypeSerializer<T> serializer)
             {
-                if (serializer is null) serializer = TypeModel.GetSubTypeSerializer<T>(Model);
+                serializer ??= TypeModel.GetSubTypeSerializer<T>(Model);
                 var len = Measure<T>(this, value, serializer);
                 AdvanceSubMessage(ref state, len, PrefixStyle.Base128);
             }
@@ -194,6 +194,10 @@ namespace ProtoBuf
         }
 
         [MethodImpl(ProtoReader.HotPath)]
+        internal static int MeasureInt32(int value)
+            => value < 0 ? 10 : MeasureUInt32((uint)value);
+
+        [MethodImpl(ProtoReader.HotPath)]
         internal static int MeasureUInt32(uint value)
         {
 #if PLAT_INTRINSICS
@@ -207,6 +211,10 @@ namespace ProtoBuf
             return count;
 #endif
         }
+
+        [MethodImpl(ProtoReader.HotPath)]
+        internal static int MeasureInt64(long value)
+            => value < 0 ? 10 : MeasureUInt64((ulong)value);
 
         [MethodImpl(ProtoReader.HotPath)]
         internal static int MeasureUInt64(ulong value)
