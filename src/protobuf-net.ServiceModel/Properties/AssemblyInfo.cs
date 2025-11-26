@@ -1,6 +1,6 @@
 ﻿
 using System.Runtime.CompilerServices;
 
-#if PLAT_SKIP_LOCALS_INIT
+#if !NETSTANDARD2_0_OR_GREATER // see #1214
 [module: SkipLocalsInit]
 #endif
