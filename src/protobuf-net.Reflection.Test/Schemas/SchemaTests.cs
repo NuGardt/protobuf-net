@@ -14,9 +14,9 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace ProtoBuf.Schemas
 {
@@ -118,10 +118,10 @@ namespace ProtoBuf.Schemas
         [Fact]
         public void FullyQualifiedNames()
         {
-            var schemaPath = Path.Combine(Directory.GetCurrentDirectory(), SchemaPath);
-            const string path = "field_types.proto";
+            var path = Path.Combine(SchemaPath, "field_types.proto");
 
             var set = new FileDescriptorSet();
+            set.AddImportPath(".");
             set.Add(path, includeInOutput: true);
             set.Process();
             foreach (var file in set.Files)
@@ -130,14 +130,14 @@ namespace ProtoBuf.Schemas
                 {
                     if (messageType.Name.Equals("TestObject"))
                     {
-                        Assert.Equal("example.TestObject", messageType.GetFullyQualifiedName());
+                        Assert.Equal(".example.TestObject", messageType.GetFullyQualifiedName());
                     }
 
                     foreach (var nestedType in messageType.NestedTypes)
                     {
                         if (nestedType.Name.Equals("NestedObject"))
                         {
-                            Assert.Equal("example.TestObject.NestedObject", nestedType.GetFullyQualifiedName());
+                            Assert.Equal(".example.TestObject.NestedObject", nestedType.GetFullyQualifiedName());
                         }
                     }
 
@@ -145,17 +145,64 @@ namespace ProtoBuf.Schemas
                     {
                         if (nestedEnum.Name.Equals("NestedEnum"))
                         {
-                            Assert.Equal("example.TestObject.NestedEnum", nestedEnum.GetFullyQualifiedName());
+                            Assert.Equal(".example.TestObject.NestedEnum", nestedEnum.GetFullyQualifiedName());
                         }
                     }
                 }
             }
         }
 
-        [SkippableFact]
+        [Fact]
+        public void ParentForMessages()
+        {
+            var path = Path.Combine(SchemaPath, "field_types.proto");
+
+            var set = new FileDescriptorSet();
+            set.AddImportPath(".");
+            set.Add(path, includeInOutput: true);
+            set.Process();
+            var fileDescriptorProto = set.Files.Single();
+            Assert.Equal(set, fileDescriptorProto.GetParentFileSet());
+
+            var enumType = fileDescriptorProto.EnumTypes.Single();
+            Assert.Equal(fileDescriptorProto, enumType.GetParentFile());
+
+            var messageType = fileDescriptorProto.MessageTypes.Single();
+            Assert.Equal(fileDescriptorProto, messageType.GetParentFile());
+
+            var nestedType = messageType.NestedTypes.Single();
+            Assert.Equal(messageType, nestedType.GetParentMessageType());
+
+            var field = nestedType.Fields.Single();
+            Assert.Equal(nestedType, field.GetParentMessageType());
+
+            var nestedEnum = messageType.EnumTypes.Single();
+            Assert.Equal(messageType, nestedEnum.GetParentMessageType());
+        }
+
+        [Fact]
+        public void ParentForServices()
+        {
+            const string path = "basic_service.proto";
+
+            var set = new FileDescriptorSet();
+            set.AddImportPath(".");
+            set.Add(path, includeInOutput: true);
+            set.Process();
+            var fileDescriptorProto = set.Files.Single();
+            Assert.Equal(set, fileDescriptorProto.GetParentFileSet());
+
+            var service = fileDescriptorProto.Services.Single();
+            Assert.Equal(fileDescriptorProto, service.GetParentFile());
+
+            var method = service.Methods.Single();
+            Assert.Equal(service, method.GetParentService());
+        }
+
+        [Fact]
         public void EverythingProtoLangver3()
         {
-            Skip.IfNot(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
+            Assert.SkipUnless(RuntimeInformation.IsOSPlatform(OSPlatform.Windows), "windows only");
             var schemaPath = Path.Combine(Directory.GetCurrentDirectory(), SchemaPath);
             const string path = "everything.proto";
 
@@ -197,10 +244,10 @@ namespace ProtoBuf.Schemas
             catch (PlatformNotSupportedException) { }
         }
 
-        [SkippableFact()]
+        [Fact]
         public void DescriptorProtoVB()
         {
-            Skip.IfNot(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
+            Assert.SkipUnless(RuntimeInformation.IsOSPlatform(OSPlatform.Windows), "windows only");
             var schemaPath = Path.Combine(Directory.GetCurrentDirectory(), SchemaPath);
             const string path = "descriptor.proto";
 
@@ -310,7 +357,8 @@ namespace ProtoBuf.Schemas
             var protocBinPath = Path.Combine(schemaPath, Path.ChangeExtension(path, "protoc.bin"));
             int exitCode;
             string protocExe = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"windows\protoc" :
-                RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? @"macosx/protoc" : "";
+                RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? @"macosx/protoc" :
+                RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? @"linux/protoc" : "";
             if (string.IsNullOrWhiteSpace(protocExe))
                 throw new PlatformNotSupportedException(RuntimeInformation.OSDescription);
             using (var proc = new Process())
@@ -326,8 +374,8 @@ namespace ProtoBuf.Schemas
                 psi.UseShellExecute = false;
                 psi.WorkingDirectory = schemaPath;
                 proc.Start();
-                var stdout = proc.StandardOutput.ReadToEndAsync();
-                var stderr = proc.StandardError.ReadToEndAsync();
+                var stdout = proc.StandardOutput.ReadToEndAsync(TestContext.Current.CancellationToken);
+                var stderr = proc.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
                 if (!proc.WaitForExit(5000))
                 {
                     try { proc.Kill(); } catch { }
@@ -374,8 +422,8 @@ namespace ProtoBuf.Schemas
                 psi.UseShellExecute = false;
                 psi.WorkingDirectory = schemaPath;
                 proc.Start();
-                var stdout = proc.StandardOutput.ReadToEndAsync();
-                var stderr = proc.StandardError.ReadToEndAsync();
+                var stdout = proc.StandardOutput.ReadToEndAsync(TestContext.Current.CancellationToken);
+                var stderr = proc.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
                 if (!proc.WaitForExit(5000))
                 {
                     try { proc.Kill(); } catch { }
@@ -466,6 +514,7 @@ namespace ProtoBuf.Schemas
 
             if (exitCode == 0)
             {
+                Assert.SkipUnless(File.Exists(protocBinPath), "no output");
                 var protocHex = GetPrettyHex(File.ReadAllBytes(protocBinPath));
                 File.WriteAllText(Path.ChangeExtension(protocBinPath, "protoc.hex"), protocHex);
 
@@ -548,3 +597,11 @@ namespace ProtoBuf.Schemas
 #endif
     }
 }
+
+#if !NET
+internal static class StreamReaderExtensions
+{
+    public static Task<string> ReadToEndAsync(this StreamReader reader, CancellationToken _)
+        => reader.ReadToEndAsync(); // cancellation not available, meh
+}
+#endif
